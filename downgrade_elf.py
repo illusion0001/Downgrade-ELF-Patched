@@ -1675,10 +1675,10 @@ with open(output_file_path_fixed, 'r+b') as f:
 					offset = 0
 
 					while offset < phdr.file_size:
-						length = ord(data[offset])
+						length = data[offset]
 						offset += 1
 						name = data[offset:offset + length]
-						name, old_sdk_version = name.split(':', 1)
+						name, old_sdk_version = name.split(b':', 1)
 
 						struct_fmt = b'I'
 						struct_size = struct.calcsize(struct_fmt)
@@ -1700,7 +1700,7 @@ with open(output_file_path_fixed, 'r+b') as f:
 						if old_sdk_version > new_sdk_version:
 							has_changes = True
 
-							data = data[:offset] + name + ':' + struct.pack(struct_fmt, new_sdk_version) + data[offset + length:]
+							data = data[:offset] + name + b':' + struct.pack(struct_fmt, new_sdk_version) + data[offset + length:]
 
 						offset += length
 
