@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 # (c) flatz
 
 import string
@@ -64,7 +64,7 @@ def stringify_sdk_version(major, minor, patch):
 	return '{0:02x}.{1:03x}.{2:03x}'.format(major, minor, patch)
 
 def unstringify_sdk_version(sdk_version):
-	major, minor, patch = map(lambda x: int(x, 16), sdk_version.split('.', 2))
+	major, minor, patch = [int(x, 16) for x in sdk_version.split('.', 2)]
 	return major, minor, patch
 
 def build_sdk_version(major, minor, patch):
@@ -127,7 +127,7 @@ ENUM_SYMTAB_TYPES = dict(
 )
 
 class ElfProgramHeader(object):
-	FMT = '<2I6Q'
+	FMT = b'<2I6Q'
 
 	PT_NULL = 0x0
 	PT_LOAD = 0x1
@@ -174,7 +174,7 @@ class ElfProgramHeader(object):
 		return True
 
 class ElfSectionHeader(object):
-	FMT = '<2I4Q2I2Q'
+	FMT = b'<2I4Q2I2Q'
 
 	def __init__(self, fmt):
 		self.name = None
@@ -204,9 +204,9 @@ class ElfSectionHeader(object):
 		return True
 
 class ElfFile(object):
-	MAGIC = '\x7FELF'
+	MAGIC = b'\x7FELF'
 
-	FMT = '<4s5B6xB2HI3QI6H'
+	FMT = b'<4s5B6xB2HI3QI6H'
 
 	CLASS_NONE = 0
 	CLASS_64 = 2
@@ -266,38 +266,38 @@ class ElfFile(object):
 
 		self.magic, self.cls, self.encoding, self.legacy_version, self.os_abi, self.abi_version, self.nident_size, self.type, self.machine, self.version, self.entry, self.phdr_offset, self.shdr_offset, self.flags, self.ehdr_size, self.phdr_size, self.phdr_count, self.shdr_size, self.shdr_count, self.shdr_strtable_idx = struct.unpack(ElfFile.FMT, data)
 		if self.magic != ElfFile.MAGIC:
-			print('error: invalid magic: 0x{0:08X}'.format(self.magic))
+			print(('error: invalid magic: 0x{0:08X}'.format(self.magic)))
 			return False
 		if self.encoding != ElfFile.DATA_LSB:
-			print('error: unsupported encoding: 0x{0:02X}'.format(self.encoding))
+			print(('error: unsupported encoding: 0x{0:02X}'.format(self.encoding)))
 			return False
 		if self.legacy_version != ElfFile.VERSION_CURRENT:
 			raise Exception('Unsupported version: 0x{0:x}'.format(self.version))
 		if self.cls != ElfFile.CLASS_64:
-			print('error: unsupported class: 0x{0:02X}'.format(self.cls))
+			print(('error: unsupported class: 0x{0:02X}'.format(self.cls)))
 			return False
 		if self.type not in [ElfFile.TYPE_SCE_EXEC, ElfFile.TYPE_SCE_EXEC_ASLR, ElfFile.TYPE_SCE_DYNAMIC]:
-			print('error: unsupported type: 0x{0:04X}'.format(self.type))
+			print(('error: unsupported type: 0x{0:04X}'.format(self.type)))
 			return False
 		if self.machine != ElfFile.MACHINE_X86_64:
-			print('error: unexpected machine: 0x{0:X}'.format(self.machine))
+			print(('error: unexpected machine: 0x{0:X}'.format(self.machine)))
 			return False
 		if self.ehdr_size != struct.calcsize(ElfFile.FMT):
-			print('error: invalid elf header size: 0x{0:X}'.format(self.ehdr_size))
+			print(('error: invalid elf header size: 0x{0:X}'.format(self.ehdr_size)))
 			return False
 		if self.phdr_size > 0 and self.phdr_size != struct.calcsize(ElfProgramHeader.FMT):
-			print('error: invalid program header size: 0x{0:X}'.format(self.phdr_size))
+			print(('error: invalid program header size: 0x{0:X}'.format(self.phdr_size)))
 			return False
 		if self.shdr_size > 0 and self.shdr_size != struct.calcsize(ElfSectionHeader.FMT):
-			print('error: invalid section header size: 0x{0:X}'.format(self.shdr_size))
+			print(('error: invalid section header size: 0x{0:X}'.format(self.shdr_size)))
 			return False
 
 		self.phdrs = []
-		for i in xrange(self.phdr_count):
+		for i in range(self.phdr_count):
 			phdr = ElfProgramHeader()
 			f.seek(self.phdr_offset + i * self.phdr_size)
 			if not phdr.load(f):
-				print('error: unable to load program header #{0}'.format(i))
+				print(('error: unable to load program header #{0}'.format(i)))
 				return False
 			self.phdrs.append(phdr)
 
@@ -307,7 +307,7 @@ class ElfFile(object):
 		#		shdr = ElfSectionHeader()
 		#		f.seek(self.shdr_offset + i * self.shdr_size)
 		#		if not shdr.load(f):
-		#			print('error: unable to load section header #{0}'.format(i))
+		#			print(('error: unable to load section header #{0}'.format(i)))
 		#			return False
 		#		self.shdrs.append(shdr)
 
@@ -326,14 +326,14 @@ class ElfFile(object):
 			f.seek(self.phdr_offset + i * self.phdr_size)
 
 			if not phdr.save(f):
-				print('error: unable to save program header #{0}'.format(i))
+				print(('error: unable to save program header #{0}'.format(i)))
 				return False
 
 		for i, shdr in enumerate(self.shdrs):
 			f.seek(self.shdr_offset + i * self.shdr_size)
 
 			if not shdr.save(f):
-				print('error: unable to save section header #{0}'.format(i))
+				print(('error: unable to save section header #{0}'.format(i)))
 				return False
 
 		return True
@@ -445,28 +445,28 @@ def remove_replacements_duplicates(replacements):
 
 def print_patch_memhole_references_help():
 	print("patch memhole references options:")
-	print(
+	print((
 		"00x:" + '\t' + "0 - don't patch memory hole segments bytes"
 		+ "\n" + '\t' + "1 - patch memory hole segments bytes"
 		+ "\n" + "0x0:" + '\t' + "0 - don't patch memory hole segments bytes that the bits from their end up to the replacement value bytes amount aren't 0"
 		+ "\n" + '\t' + "1 - patch memory hole segments bytes that the bits from their end up to the replacement value bytes amount aren't 0"
 		+ "\n" + "x00:" + '\t' + "0 - don't patch memory hole segments bytes with addresses that aren't a multiply of 8"
 		+ "\n" + '\t' + "1 - patch memory hole segments bytes with addresses that aren't a multiply of 8"
-	)
+	))
 
 Debug = False
 
 parser = MyParser(description='elf downgrader tool')
 
 if Debug is False:
-	parser.add_argument('--input', required=False, type=str, help='old file')
+	parser.add_argument('--input', required=True, type=str, help='old file')
 	parser.add_argument('--output', required=False, default="", type=str, help='new file')
 	parser.add_argument('--dry-run', required=False, default=False, action='store_true', help='if inserted then nothing will be written to the output file')
 	parser.add_argument('--verbose', required=False, default=False, action='store_true', help='detailed printing')
 	parser.add_argument('--overwrite', required=False, default=False, action='store_true')
 	parser.add_argument('--sdk-version', required=False, default="0", type=str, help='wanted sdk version, leave empty for no patching')# 05.050.001 is the one usually used when converting sdk version
 	parser.add_argument('--add-modded-to-output', required=False, default=False, action='store_true', help='if true then adds _modded to the output file name')
-	parser.add_argument('--patch-memhole', required=False, default="1", type=str, help="0 - don't patch, 1 - extend the memory size of the segment to fill the memhole, 2 - move the segments after the memhole backwards")
+	parser.add_argument('--patch-memhole', required=False, default="2", type=str, help="0 - don't patch, 1 - patch the memory size, 2 - move the segments")
 	parser.add_argument('--patch-memhole-references', required=False, default="001", type=str, help=("use --patch-memhole-references-help in order to see usage"))
 	parser.add_argument('--patch-memhole-references-help', required=False, default=False, action='store_true')
 	parser.add_argument('--not-patch-program-headers', required=False, default=False, action='store_true')
@@ -486,7 +486,7 @@ else:
 	parser.add_argument('--overwrite', required=False, default=False, action='store_true')
 	parser.add_argument('--sdk-version', required=False, default="0", type=str, help='wanted sdk version, leave empty for no patching')# 05.050.001 is the one usually used when converting sdk version
 	parser.add_argument('--add-modded-to-output', required=False, default=False, action='store_true', help='if true then adds _modded to the output file name')
-	parser.add_argument('--patch-memhole', required=False, default="1", type=str, help="0 - don't patch, 1 - extend the memory size of the segment to fill the memhole, 2 - move the segments after the memhole backwards")
+	parser.add_argument('--patch-memhole', required=False, default="2", type=str, help="0 - don't patch, 1 - patch the memory size, 2 - move the segments")
 	parser.add_argument('--patch-memhole-references', required=False, default="001", type=str, help=("use --patch-memhole-references-help in order to see usage"))
 	parser.add_argument('--patch-memhole-references-help', required=False, default=False, action='store_true')
 	parser.add_argument('--not-patch-program-headers', required=False, default=False, action='store_true')
@@ -528,7 +528,8 @@ if args.output == "":
 	output_file_name = output_file_name_without_extension + '.' + input_file_name_extension
 
 	if args.overwrite is True:
-		output_folder_path = input_folder_path + "/backup"
+		# output_folder_path = input_folder_path + "/backup"
+		output_folder_path = "../backup"
 
 		output_file_path = output_folder_path + "/" + output_file_name
 	else:
@@ -560,7 +561,7 @@ if args.dry_run is True:
 else:
 	output_file_path_fixed = output_file_path
 	
-print(
+print((
 	"Input:" + ' ' + input_file_path + "\n"
 	+ "Output:" + ' ' + output_file_path + "\n"
 	+ "Dry Run:" + ' ' + ("True" if args.dry_run is True else "False") + "\n"
@@ -576,10 +577,10 @@ print(
 	+ "Patch Relocation Section:" + ' ' + ("False" if args.not_patch_relocation_section is True else "True") + "\n"
 	+ "Patch Symbol Table:" + ' ' + ("False" if args.not_patch_symbol_table is True else "True") + "\n"
 	+ "Patch Elf Header:" + ' ' + ("False" if args.not_patch_elf_header is True else "True")
-)
+))
 
 print("")
-print('processing elf file: {0}'.format(output_file_path))
+print(('processing elf file: {0}'.format(output_file_path)))
 
 with open(output_file_path_fixed, 'r+b') as f:
 	elf = ElfFile()
@@ -622,13 +623,13 @@ with open(output_file_path_fixed, 'r+b') as f:
 
 	if elf.type in [ElfFile.TYPE_SCE_EXEC, ElfFile.TYPE_SCE_EXEC_ASLR]:
 		needed_type = ElfProgramHeader.PT_SCE_PROCPARAM
-		param_magic = 'ORBI'
+		param_magic = b'ORBI'
 		
 		print("")
 		print('executable file detected')
 	elif elf.type == ElfFile.TYPE_SCE_DYNAMIC:
 		needed_type = ElfProgramHeader.PT_SCE_MODULE_PARAM
-		param_magic = '\xBF\xF4\x13\x3C'
+		param_magic = b'\xBF\xF4\x13\x3C'
 		
 		print("")
 		print('module file detected')
@@ -644,17 +645,17 @@ with open(output_file_path_fixed, 'r+b') as f:
 		new_sdk_version = build_sdk_version(major, minor, patch)
 		new_sdk_version_str = stringify_sdk_version(major, minor, patch)
 
-		print('wanted sdk version: {0}'.format(new_sdk_version_str))
+		print(('wanted sdk version: {0}'.format(new_sdk_version_str)))
 		
 		print("")
-		print('searching for {0} param segment'.format('proc' if needed_type == ElfProgramHeader.PT_SCE_PROCPARAM else 'module'))
+		print(('searching for {0} param segment'.format('proc' if needed_type == ElfProgramHeader.PT_SCE_PROCPARAM else 'module')))
 
 		phdr = elf.get_phdr_by_type(needed_type)
 
 		if phdr is not None:
 			print('found param segment, parsing param structure')
 
-			struct_fmt = '<I'
+			struct_fmt = b'<I'
 
 			f.seek(phdr.offset)
 
@@ -680,7 +681,7 @@ with open(output_file_path_fixed, 'r+b') as f:
 			major, minor, patch = parse_sdk_version(old_sdk_version)
 			old_sdk_version_str = stringify_sdk_version(major, minor, patch)
 
-			print('sdk version: {0}'.format(old_sdk_version_str))
+			print(('sdk version: {0}'.format(old_sdk_version_str)))
 
 			if old_sdk_version > new_sdk_version:
 				print("")
@@ -927,7 +928,7 @@ with open(output_file_path_fixed, 'r+b') as f:
 				print("An error occurred, as the ELF is not a valid OELF!")
 				sys.exit(1)
 	
-			struct_fmt = '<QQ'
+			struct_fmt = b'<QQ'
 			struct_size = struct.calcsize(struct_fmt)
 			
 			DynamicTableEntriesAmount = int(dynamicPH.mem_size / struct_size)
@@ -943,7 +944,7 @@ with open(output_file_path_fixed, 'r+b') as f:
 			or args.not_patch_symbol_table is False
 		) and args.patch_memhole == "2":
 			for DynamicTableEntriesIndex in range(0, DynamicTableEntriesAmount):
-				struct_fmt = '<QQ'
+				struct_fmt = b'<QQ'
 				struct_size = struct.calcsize(struct_fmt)
 
 				f.seek(dynamicPH.offset + (DynamicTableEntriesIndex * struct_size))
@@ -960,12 +961,12 @@ with open(output_file_path_fixed, 'r+b') as f:
 				elif d_tag == DT_SCE_SYMTABSZ:
 					SymTableSize += d_val
 		
-			struct_fmt = '<QLLq'
+			struct_fmt = b'<QLLq'
 			struct_size = struct.calcsize(struct_fmt)
 
 			RelaTableEntriesAmount = int(RelaTableSize / struct_size)
 		
-			struct_fmt = '<IBBHQQ'
+			struct_fmt = b'<IBBHQQ'
 			struct_size = struct.calcsize(struct_fmt)
 
 			SymTableEntriesAmount = int(SymTableSize / struct_size)
@@ -985,12 +986,12 @@ with open(output_file_path_fixed, 'r+b') as f:
 
 				if (segment.vaddr + mem_size_aligned) < next_segment.vaddr:
 					print("")
-					print(
+					print((
 						"found a memhole between:"
 						+ ' ' + CheckHexText(segment.vaddr + mem_size_aligned, AddressesLength, True)
 						+ ' ' + '-' + ' ' + CheckHexText(next_segment.vaddr, AddressesLength, True)
 						+ ' ' + "(not including the last address)"
-					)
+					))
 					
 					old_mem_size = segment.mem_size
 
@@ -1037,9 +1038,6 @@ with open(output_file_path_fixed, 'r+b') as f:
 
 						segment.mem_size = new_mem_size
 
-						paddr_diff = old_paddr - new_paddr
-						vaddr_diff = old_vaddr - new_vaddr
-
 						if args.patch_memhole == "2":
 							next_segment.paddr = new_paddr
 							next_segment.vaddr = new_vaddr
@@ -1049,12 +1047,12 @@ with open(output_file_path_fixed, 'r+b') as f:
 									if old_paddr == segments[segments_indexB].paddr:
 										method_found = True
 
-										segments[segments_indexB].paddr = new_paddr
+										segments[segments_indexB].paddr = next_segment.paddr
 
 									if old_vaddr == segments[segments_indexB].vaddr:
 										method_found = True
 
-										segments[segments_indexB].vaddr = new_vaddr
+										segments[segments_indexB].vaddr = next_segment.paddr
 
 									if segments[segments_indexB].mem_size > paddr_mem_size:
 										method_found = True
@@ -1069,40 +1067,23 @@ with open(output_file_path_fixed, 'r+b') as f:
 									if segments[segments_indexB].file_size > paddr_file_size:
 										method_found = True
 
-										paddr_file_size = segments[segments_indexB].file_size
+										paddr_file_size = segments[segments_indexB].mem_size
 
 									if segments[segments_indexB].file_size > vaddr_file_size:
 										method_found = True
 
-										vaddr_file_size = segments[segments_indexB].file_size
+										vaddr_file_size = segments[segments_indexB].mem_size
 
 									if method_found is True:
 										method_found = False
 									else:
 										break
-									
-							paddr_end = paddr_start + paddr_mem_size - 1
-							vaddr_end = vaddr_start + vaddr_mem_size - 1
 
-							for phdrs_index, phdr in enumerate(elf.phdrs):
-								if (
-									phdr.paddr > old_paddr
-									or phdr.vaddr > old_vaddr
-								):
-									if phdr.paddr > old_paddr:
-										phdr.paddr -= paddr_diff
+						paddr_end = paddr_start + paddr_mem_size - 1
+						vaddr_end = vaddr_start + vaddr_mem_size - 1
 
-									if phdr.vaddr > old_vaddr:
-										phdr.vaddr -= vaddr_diff
-
-									if phdr.paddr + phdr.mem_size - 1 > paddr_end:
-										paddr_end = phdr.paddr + phdr.mem_size - 1
-
-									if phdr.vaddr + phdr.mem_size - 1 > vaddr_end:
-										vaddr_end = phdr.vaddr + phdr.mem_size - 1
-						else:
-							paddr_end = paddr_start + paddr_mem_size - 1
-							vaddr_end = vaddr_start + vaddr_mem_size - 1
+						paddr_diff = old_paddr - new_paddr
+						vaddr_diff = old_vaddr - new_vaddr
 								
 						if args.verbose is True:
 							Headers = []
@@ -1119,7 +1100,7 @@ with open(output_file_path_fixed, 'r+b') as f:
 							Fields.append(Headers[2] + ':' + ' ' + CheckHexText(old_paddr, AddressesLength, True))
 							Fields.append(Headers[3] + ':' + ' ' + CheckHexText(new_paddr, AddressesLength, True))
 
-							print('\t'.join(Fields))
+							print(('\t'.join(Fields)))
 								
 						print("")	
 						print("patched program headers")
@@ -1140,10 +1121,10 @@ with open(output_file_path_fixed, 'r+b') as f:
 						if DynamicTableEntriesAmount == 0:
 							print("couldn't find the dynamic section")
 						else:
-							print("Found dynamic section, entries:" + ' ' + str(DynamicTableEntriesAmount))
+							print(("Found dynamic section, entries:" + ' ' + str(DynamicTableEntriesAmount)))
 
 							for DynamicTableEntriesIndex in range(0, DynamicTableEntriesAmount):
-								struct_fmt = '<QQ'
+								struct_fmt = b'<QQ'
 								struct_size = struct.calcsize(struct_fmt)
 
 								faddr = DynamicTable_addr + (DynamicTableEntriesIndex * struct_size)
@@ -1169,7 +1150,7 @@ with open(output_file_path_fixed, 'r+b') as f:
 										if d_val_replacements is None:
 											d_val_replacements = []
 
-										d_val_replacements.append(add_replacement(old_d_val, new_d_val, '<Q'))
+										d_val_replacements.append(add_replacement(old_d_val, new_d_val, '<Q')) #ECHO
 
 										new_struct_unpacked = d_tag, new_d_val
 										new_struct_data = struct.pack(struct_fmt, d_tag, new_d_val)
@@ -1193,7 +1174,7 @@ with open(output_file_path_fixed, 'r+b') as f:
 											Fields.append(Headers[2] + ':' + ' ' + CheckHexText(old_d_val, ValuesLength, True))
 											Fields.append(Headers[3] + ':' + ' ' + CheckHexText(new_d_val, ValuesLength, True))
 
-											print('\t'.join(Fields))
+											print(('\t'.join(Fields)))
 								
 							print("")	
 							print("patched dynamic section")
@@ -1207,10 +1188,10 @@ with open(output_file_path_fixed, 'r+b') as f:
 						if RelaTableEntriesAmount == 0:
 							print("couldn't find the relocation section")
 						else:
-							print("Found relocation section, entries:" + ' ' + str(RelaTableEntriesAmount))
+							print(("Found relocation section, entries:" + ' ' + str(RelaTableEntriesAmount)))
 
 							for RelaTableEntriesIndex in range(0, RelaTableEntriesAmount):
-								struct_fmt = '<QLLq'
+								struct_fmt = b'<QLLq'
 								struct_size = struct.calcsize(struct_fmt)
 
 								faddr = RelaTable_addr + (RelaTableEntriesIndex * struct_size)
@@ -1240,7 +1221,7 @@ with open(output_file_path_fixed, 'r+b') as f:
 									if r_addr_replacements is None:
 										r_addr_replacements = []
 
-									r_addr_replacements.append(add_replacement(old_r_addr, new_r_addr, '<Q'))
+									r_addr_replacements.append(add_replacement(old_r_addr, new_r_addr, '<Q')) #ECHO
 								
 									if args.verbose is True:
 										Headers = []
@@ -1263,7 +1244,7 @@ with open(output_file_path_fixed, 'r+b') as f:
 
 										#Fields.append(Headers[6] + ':' + ' ' + CheckHexText(r_sym, SymbolsLength, True))
 
-										print('\t'.join(Fields))
+										print(('\t'.join(Fields)))
 				
 								if new_r_addend >= vaddr_start and new_r_addend <= vaddr_end:
 									new_r_addend -= vaddr_diff
@@ -1271,7 +1252,7 @@ with open(output_file_path_fixed, 'r+b') as f:
 									if r_addend_replacements is None:
 										r_addend_replacements = []
 
-									r_addend_replacements.append(add_replacement(old_r_addend, new_r_addend, '<q'))
+									r_addend_replacements.append(add_replacement(old_r_addend, new_r_addend, '<q')) #ECHO
 								
 									if args.verbose is True:
 										Headers = []
@@ -1294,7 +1275,7 @@ with open(output_file_path_fixed, 'r+b') as f:
 
 										#Fields.append(Headers[6] + ':' + ' ' + CheckHexText(r_sym, SymbolsLength, True))
 
-										print('\t'.join(Fields))
+										print(('\t'.join(Fields)))
 				
 								if new_r_addr != old_r_addr or new_r_addend != old_r_addend:
 									new_struct_unpacked = new_r_addr, r_info, r_sym, new_r_addend
@@ -1316,10 +1297,10 @@ with open(output_file_path_fixed, 'r+b') as f:
 						if SymTableEntriesAmount == 0:
 							print("couldn't find the symbol table")
 						else:
-							print("Found symbol table, entries:" + ' ' + str(SymTableEntriesAmount))
+							print(("Found symbol table, entries:" + ' ' + str(SymTableEntriesAmount)))
 					
 							for SymTableEntriesIndex in range(0, SymTableEntriesAmount):
-								struct_fmt = '<IBBHQQ'
+								struct_fmt = b'<IBBHQQ'
 								struct_size = struct.calcsize(struct_fmt)
 
 								faddr = SymTable_addr + (SymTableEntriesIndex * struct_size)
@@ -1350,7 +1331,7 @@ with open(output_file_path_fixed, 'r+b') as f:
 									if st_value_replacements is None:
 										st_value_replacements = []
 
-									st_value_replacements.append(add_replacement(old_st_value, new_st_value, '<Q'))
+									st_value_replacements.append(add_replacement(old_st_value, new_st_value, '<Q')) #ECHO
 
 									new_struct_unpacked = st_name, st_info, st_other, st_shndx, new_st_value, st_size
 									new_struct_data = struct.pack(struct_fmt, st_name, st_info, st_other, st_shndx, new_st_value, st_size)
@@ -1386,7 +1367,7 @@ with open(output_file_path_fixed, 'r+b') as f:
 										#Fields.append(Headers[8] + ':' + ' ' + str(st_info))
 										#Fields.append(Headers[9] + ':' + ' ' + str(st_other))
 
-										print('\t'.join(Fields))
+										print(('\t'.join(Fields)))
 								
 							print("")	
 							print("patched symbol table")
@@ -1416,7 +1397,7 @@ with open(output_file_path_fixed, 'r+b') as f:
 						else:
 							replacements_amount = 0
 
-						print("Found memory hole references section, entries:" + ' ' + str(struct_size))
+						print(("Found memory hole references section, entries:" + ' ' + str(struct_size)))
 
 						if replacements_amount > 0:
 							faddr = segment.offset
@@ -1509,15 +1490,15 @@ with open(output_file_path_fixed, 'r+b') as f:
 														if patch_memhole_references_patch_rest_bytes_not_zeroes is True:
 															method_found = True
 
-															print(
+															print((
 																"Patching memory hole segments bytes that the bits from their end"
 																+ ' ' + "up to the replacement value bytes amount aren't 0"
-															)
+															))
 														else:
-															print(
+															print((
 																"Skipped patch for memory hole segments bytes that the bits from their end"
 																+ ' ' + "up to the replacement value bytes amount aren't 0"
-															)
+															))
 													else:
 														method_found = True
 
@@ -1578,7 +1559,7 @@ with open(output_file_path_fixed, 'r+b') as f:
 															Fields.append(Headers[3] + ':' + ' ' + CheckHexText(replacement_new_value, AddressesLength, True))
 															Fields.append(Headers[4] + ':' + ' ' + Section)
 
-															print('\t'.join(Fields))
+															print(('\t'.join(Fields)))
 													else:
 														Headers = []
 
@@ -1609,7 +1590,7 @@ with open(output_file_path_fixed, 'r+b') as f:
 														if len(Section) > 0:
 															Fields.append(Headers[3] + ':' + ' ' + Section)
 
-														print('(' + '\t'.join(Fields) + ')')
+														print(('(' + '\t'.join(Fields) + ')'))
 
 												if method_found is True:
 													# going forward in current value size and not in replacement value size
@@ -1643,14 +1624,14 @@ with open(output_file_path_fixed, 'r+b') as f:
 						print("patched memory hole references")
 
 					print("")
-					print("First Segment Virtual Address:" + ' ' + CheckHexText(FirstSegment_VirtualAddress, AddressesLength, True))
+					print(("First Segment Virtual Address:" + ' ' + CheckHexText(FirstSegment_VirtualAddress, AddressesLength, True)))
 					print("")
-					print("Segment Before Memory Hole Virtual Address:" + ' ' + CheckHexText(SegmentBeforeMemHole_VirtualAddress, AddressesLength, True))
+					print(("Segment Before Memory Hole Virtual Address:" + ' ' + CheckHexText(SegmentBeforeMemHole_VirtualAddress, AddressesLength, True)))
 					print("")
-					print("Segment After Memory Hole Unmapped Virtual Address:" + ' ' + CheckHexText(SegmentAfterMemHole_Unmapped_VirtualAddress, AddressesLength, True))
-					print("Segment After Memory Hole Mapped Virtual Address:" + ' ' + CheckHexText(SegmentAfterMemHole_Mapped_VirtualAddress, AddressesLength, True))
+					print(("Segment After Memory Hole Unmapped Virtual Address:" + ' ' + CheckHexText(SegmentAfterMemHole_Unmapped_VirtualAddress, AddressesLength, True)))
+					print(("Segment After Memory Hole Mapped Virtual Address:" + ' ' + CheckHexText(SegmentAfterMemHole_Mapped_VirtualAddress, AddressesLength, True)))
 					# print("Segment After Memory Hole File Size:" + ' ' + CheckHexText(SegmentAfterMemHole_FileSize, MemorySizeLength, True))
-					print("Segment After Memory Hole Memory Size:" + ' ' + CheckHexText(SegmentAfterMemHole_MemorySize, MemorySizeLength, True))
+					print(("Segment After Memory Hole Memory Size:" + ' ' + CheckHexText(SegmentAfterMemHole_MemorySize, MemorySizeLength, True)))
 
 	#
 	# Patching version information in version segment.
@@ -1699,7 +1680,7 @@ with open(output_file_path_fixed, 'r+b') as f:
 						name = data[offset:offset + length]
 						name, old_sdk_version = name.split(':', 1)
 
-						struct_fmt = 'I'
+						struct_fmt = b'I'
 						struct_size = struct.calcsize(struct_fmt)
 
 						if len(old_sdk_version) != struct_size:
@@ -1707,14 +1688,14 @@ with open(output_file_path_fixed, 'r+b') as f:
 
 							sys.exit(1)
 							
-						struct_fmt = '>I'
+						struct_fmt = b'>I'
 
 						old_sdk_version, = struct.unpack(struct_fmt, old_sdk_version)
 						major, minor, patch = parse_sdk_version(old_sdk_version)
 						old_sdk_version_str = stringify_sdk_version(major, minor, patch)
 
 						if args.verbose is True:
-							print('{0} (sdk version: {1})'.format(name, old_sdk_version_str))
+							print(('{0} (sdk version: {1})'.format(name, old_sdk_version_str)))
 
 						if old_sdk_version > new_sdk_version:
 							has_changes = True
@@ -1762,4 +1743,4 @@ with open(output_file_path_fixed, 'r+b') as f:
 		sys.exit(1)
 		
 	print("")
-	print('finished patching:' + ' ' + output_file_path)
+	print(('finished patching:' + ' ' + output_file_path))
